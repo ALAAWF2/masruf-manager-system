@@ -11,6 +11,38 @@ export default function ExpensesPage() {
 
   const myExpenses = expenses.filter((exp) => exp.createdBy === user?.id);
 
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case "pending":
+        return "معلق";
+      case "approved_by_department":
+        return "بانتظار التنفيذي";
+      case "waiting_executive":
+        return "بانتظار التنفيذ";
+      case "approved":
+        return "مقبول";
+      case "rejected":
+        return "مرفوض";
+      default:
+        return status;
+    }
+  };
+
+  const getBadgeVariant = (status: string) => {
+    switch (status) {
+      case "approved":
+        return "success";
+      case "rejected":
+        return "destructive";
+      case "pending":
+      case "approved_by_department":
+      case "waiting_executive":
+        return "secondary";
+      default:
+        return "outline";
+    }
+  };
+
   return (
     <div className="max-w-3xl mx-auto mt-10">
       <h1 className="text-2xl font-bold mb-6">طلبات الصرف الخاصة بك</h1>
@@ -30,20 +62,8 @@ export default function ExpensesPage() {
               <CardContent className="p-4">
                 <div className="flex justify-between items-center mb-2">
                   <h2 className="text-lg font-semibold">{expense.title}</h2>
-                  <Badge
-                    variant={
-                      expense.status === "approved"
-                        ? "success"
-                        : expense.status === "rejected"
-                        ? "destructive"
-                        : "secondary"
-                    }
-                  >
-                    {expense.status === "pending"
-                      ? "معلق"
-                      : expense.status === "approved"
-                      ? "مقبول"
-                      : "مرفوض"}
+                  <Badge variant={getBadgeVariant(expense.status)}>
+                    {getStatusText(expense.status)}
                   </Badge>
                 </div>
                 <p className="text-sm text-muted-foreground">

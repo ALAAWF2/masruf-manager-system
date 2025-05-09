@@ -14,9 +14,9 @@ type User = {
   id: string;
   name: string;
   email: string;
-  role: "employee" | "manager" | "section_manager";
-  department?: string;
+  role: "employee" | "manager" | "section_manager"; // ← ✅ صح
 };
+
 
 type AuthContextType = {
   user: User | null;
@@ -56,6 +56,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
+  // ✅ تحميل المستخدم من localStorage عند أول تشغيل
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      try {
+        setUser(JSON.parse(storedUser));
+        setLoading(false);
+      } catch {
+        localStorage.removeItem("user");
+      }
+    }
+  }, []);
+
   // ✅ حفظ المستخدم تلقائيًا في localStorage
   useEffect(() => {
     if (user) {
@@ -74,7 +87,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const userData = userDoc.data() as Omit<User, "id">;
             const fullUser = { id: firebaseUser.uid, ...userData };
             setUser(fullUser);
-            localStorage.setItem("user", JSON.stringify(fullUser)); // ✅ مهم
+            localStorage.setItem("user", JSON.stringify(fullUser));
           } else {
             const demoUser = DEMO_USERS.find(u => u.email === firebaseUser.email);
             if (demoUser) {
@@ -110,7 +123,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const userData = userDoc.data() as Omit<User, "id">;
         const fullUser = { id: firebaseUser.uid, ...userData };
         setUser(fullUser);
-        localStorage.setItem("user", JSON.stringify(fullUser)); // ✅ مهم
+        localStorage.setItem("user", JSON.stringify(fullUser));
         toast.success("تم تسجيل الدخول بنجاح");
         navigate("/");
       } else {

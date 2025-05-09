@@ -8,28 +8,45 @@ import {
   orderBy,
   Timestamp,
   doc,
-  updateDoc
+  updateDoc,
 } from "firebase/firestore";
 import { useAuth } from "./AuthContext";
 import { toast } from "sonner";
 
-type Expense = {
+export type Expense = {
   id?: string;
   title: string;
   description: string;
   amount: number;
-  status: "pending" | "approved" | "rejected" | "approved_by_department" | "waiting_executive";
+  status:
+    | "pending"
+    | "approved"
+    | "rejected"
+    | "approved_by_department"
+    | "waiting_executive";
   createdAt: Timestamp;
   createdBy: string;
-  department: string;
   employeeName: string;
+  department: string;
+  attachments?: string[];
 };
-
 
 type ExpenseContextType = {
   expenses: Expense[];
-  addExpense: (data: Omit<Expense, "id" | "createdAt" | "status" | "createdBy">) => Promise<void>;
-  updateStatus: (id: string, status: "approved" | "rejected") => Promise<void>;
+  addExpense: (
+    data: Omit<
+      Expense,
+      "id" | "createdAt" | "status" | "createdBy" | "employeeName" | "department"
+    >
+  ) => Promise<void>;
+  updateStatus: (
+    id: string,
+    status:
+      | "approved"
+      | "rejected"
+      | "approved_by_department"
+      | "waiting_executive"
+  ) => Promise<void>;
   loading: boolean;
 };
 
@@ -37,17 +54,14 @@ const ExpenseContext = createContext<ExpenseContextType>({
   expenses: [],
   addExpense: async () => {},
   updateStatus: async () => {},
-  loading: true
+  loading: true,
 });
 
 export function ExpenseProvider({ children }: { children: React.ReactNode }) {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
-  const { user } = useAuth();
 
   useEffect(() => {
-    if (!user) return;
-
     const q = query(collection(db, "expenses"), orderBy("createdAt", "desc"));
     const unsub = onSnapshot(q, (snapshot) => {
       const list: Expense[] = [];
@@ -60,14 +74,21 @@ export function ExpenseProvider({ children }: { children: React.ReactNode }) {
     });
 
     return () => unsub();
-  }, [user]);
+  }, []);
+
+  const { user } = useAuth();
 
   const addExpense = async (
-    data: Omit<Expense, "id" | "createdAt" | "status" | "createdBy">
-      & { attachments?: string[] }
+    data: Omit<
+      Expense,
+      "id" | "createdAt" | "status" | "createdBy" | "employeeName" | "department"
+    >
   ) => {
-    if (!user) return;
-  
+    if (!user?.id || !user.name || !user.department) {
+      toast.error("بيانات المستخدم غير مكتملة");
+      return;
+    }
+
     try {
       await addDoc(collection(db, "expenses"), {
         ...data,
@@ -75,33 +96,42 @@ export function ExpenseProvider({ children }: { children: React.ReactNode }) {
         status: "pending",
         createdAt: Timestamp.now(),
         createdBy: user.id,
-        employeeName: user.name,       // 👈 الاسم
-        department: user.department    // 👈 القسم
+        employeeName: user.name,
+        department: user.department,
       });
       toast.success("تم إرسال الطلب بنجاح");
     } catch (err) {
+      console.error(err);
       toast.error("فشل في إضافة الطلب");
     }
   };
-  
 
   const updateStatus = async (
     id: string,
-    status: "approved" | "rejected" | "approved_by_department" | "waiting_executive"
+    status:
+      | "approved"
+      | "rejected"
+      | "approved_by_department"
+      | "waiting_executive"
   ) => {
-  
     try {
-      await updateDoc(doc(db, "expenses", id), {
-        status
-      });
-      toast.success("تم تحديث الحالة");
+      await updateDoc(doc(db, "expenses", id), { status });
+
+      setExpenses((prev) =>
+        prev.map((e) => (e.id === id ? { ...e, status } : e))
+      );
+
+      toast.success("تم تحديث الحالة بنجاح");
     } catch (err) {
+      console.error(err);
       toast.error("حدث خطأ أثناء تحديث الحالة");
     }
   };
 
   return (
-    <ExpenseContext.Provider value={{ expenses, addExpense, updateStatus, loading }}>
+    <ExpenseContext.Provider
+      value={{ expenses, addExpense, updateStatus, loading }}
+    >
       {children}
     </ExpenseContext.Provider>
   );

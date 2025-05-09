@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -30,9 +29,9 @@ const App = () => (
           <ExpenseProvider>
             <Routes>
               <Route path="/login" element={<LoginPage />} />
-              
-              <Route 
-                path="/" 
+
+              <Route
+                path="/"
                 element={
                   <ProtectedRoute>
                     <RootLayout />
@@ -43,16 +42,16 @@ const App = () => (
                 <Route path="expenses" element={<ExpensesPage />} />
                 <Route path="expenses/new" element={<ExpenseFormPage />} />
                 <Route path="expenses/:id" element={<ExpenseDetailPage />} />
-                <Route 
-                  path="pending" 
+                <Route
+                  path="pending"
                   element={
-                    <ProtectedRoute allowedRoles={["manager"]}>
+                    <ProtectedRoute allowedRoles={["manager", "section_manager"]}>
                       <PendingExpensesPage />
                     </ProtectedRoute>
-                  } 
+                  }
                 />
               </Route>
-              
+
               <Route path="*" element={<NotFound />} />
             </Routes>
           </ExpenseProvider>

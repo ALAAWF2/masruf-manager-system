@@ -9,7 +9,8 @@ const firebaseConfig = {
   apiKey: "AIzaSyD_QR6x-0ab_S7uTb0rTS01u9N62QNuq40",
   authDomain: "masruf-manager.firebaseapp.com",
   projectId: "masruf-manager",
-  storageBucket: "masruf-manager.firebasestorage.app",
+  storageBucket: "masruf-manager.appspot.com",
+
   messagingSenderId: "153141113612",
   appId: "1:153141113612:web:ef0420214d096938e2cf29"
 };

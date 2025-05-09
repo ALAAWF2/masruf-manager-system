@@ -1,14 +1,14 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useExpenses, Expense } from "@/contexts/ExpenseContext";
+import { useExpenses } from "@/contexts/ExpenseContext"; // ✅ هذا السطر ضروري
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import {
   Card,
-  CardContent,
-  CardDescription,
   CardHeader,
+  CardContent,
   CardTitle,
+  CardDescription,
 } from "@/components/ui/card";
 import {
   Dialog,
@@ -29,21 +29,28 @@ const PendingExpensesPage = () => {
   const [comment, setComment] = useState("");
   const [action, setAction] = useState<"reject" | null>(null);
 
-  const pendingExpenses = expenses.filter(
-    (e) => e.status === "pending" && e.department === user?.department
-  );
-
-  if (user?.role !== "section_manager") {
+  if (!user || (user.role !== "section_manager" && user.role !== "manager")) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh]">
         <h2 className="text-2xl font-bold mb-2">غير مصرح بالوصول</h2>
         <p className="text-muted-foreground mb-4">
-          هذه الصفحة متاحة فقط لمدراء الأقسام
+          هذه الصفحة متاحة فقط لمدراء الأقسام والمديرين
         </p>
         <Button onClick={() => navigate("/")}>العودة إلى الصفحة الرئيسية</Button>
       </div>
     );
   }
+
+  // 👇 تصفية الطلبات حسب صلاحية الدور
+  const pendingExpenses = expenses.filter((e) => {
+    if (user.role === "manager") {
+      return e.status === "waiting_executive";
+    }
+    if (user.role === "section_manager") {
+      return e.status === "pending" && e.department === user.department;
+    }
+    return false;
+  });
 
   const handleReject = () => {
     if (selectedExpense?.id) {
@@ -78,7 +85,9 @@ const PendingExpensesPage = () => {
                     </CardDescription>
                   </div>
                   <span className="px-3 py-1 text-sm font-medium rounded-full bg-yellow-100 text-yellow-800">
-                    معلق
+                    {expense.status === "waiting_executive"
+                      ? "بانتظار التنفيذي"
+                      : "معلق"}
                   </span>
                 </div>
               </CardHeader>
@@ -87,7 +96,7 @@ const PendingExpensesPage = () => {
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">المبلغ</p>
                     <p className="font-bold">
-                      {expense.amount.toLocaleString()} ريال
+                      {expense.amount?.toLocaleString() ?? "—"} ريال
                     </p>
                   </div>
                   <div>
@@ -106,7 +115,7 @@ const PendingExpensesPage = () => {
 
                 <div className="mb-4">
                   <p className="text-sm font-medium text-muted-foreground mb-1">الوصف:</p>
-                  <p className="p-3 bg-muted/30 rounded-md">{expense.description}</p>
+                  <p className="p-3 bg-muted/30 rounded-md">{expense.description || "—"}</p>
                 </div>
 
                 <div className="flex flex-wrap gap-2">
@@ -117,20 +126,33 @@ const PendingExpensesPage = () => {
                     عرض التفاصيل الكاملة
                   </Button>
 
-                  <Button
-                    onClick={() => updateStatus(expense.id!, "approved_by_department")}
-                    className="bg-green-600 hover:bg-green-700"
-                  >
-                    الموافقة المباشرة
-                  </Button>
+                  {user.role === "section_manager" && (
+                    <>
+                     <Button
+  onClick={() => updateStatus(expense.id!, "approved")}
+  className="bg-green-600 hover:bg-green-700"
+>
+  الموافقة النهائية
+</Button>
 
-                  <Button
-                    onClick={() => updateStatus(expense.id!, "waiting_executive")}
-                    variant="default"
-                    className="bg-blue-600 hover:bg-blue-700 text-white"
-                  >
-                    إرسال للمدير التنفيذي
-                  </Button>
+                      <Button
+                        onClick={() => updateStatus(expense.id!, "waiting_executive")}
+                        variant="default"
+                        className="bg-blue-600 hover:bg-blue-700 text-white"
+                      >
+                        إرسال للمدير التنفيذي
+                      </Button>
+                    </>
+                  )}
+
+                  {user.role === "manager" && (
+                    <Button
+                      onClick={() => updateStatus(expense.id!, "approved")}
+                      className="bg-green-700 hover:bg-green-800 text-white"
+                    >
+                      الموافقة النهائية
+                    </Button>
+                  )}
 
                   <Button
                     onClick={() => {
@@ -150,7 +172,7 @@ const PendingExpensesPage = () => {
             <CardHeader>
               <CardTitle>لا توجد طلبات معلقة</CardTitle>
               <CardDescription>
-                جميع طلبات الصرف تمت مراجعتها. سيظهر هنا أي طلبات جديدة تحتاج إلى موافقة.
+                جميع الطلبات تمت مراجعتها أو لا توجد طلبات حالياً.
               </CardDescription>
             </CardHeader>
           </Card>
@@ -165,7 +187,7 @@ const PendingExpensesPage = () => {
           <DialogHeader>
             <DialogTitle>تأكيد رفض الطلب</DialogTitle>
             <DialogDescription>
-              طلب صرف #{selectedExpense?.id?.substring(0, 5)} - {selectedExpense?.title}
+              طلب #{selectedExpense?.id?.substring(0, 5)} - {selectedExpense?.title}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">

@@ -1,27 +1,36 @@
-
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { File, Bell, Users, List, Settings } from "lucide-react";
 
-const employeeLinks = [
-  { name: "لوحة المعلومات", href: "/", icon: List },
-  { name: "طلبات الصرف", href: "/expenses", icon: File },
-];
-
-const managerLinks = [
-  { name: "لوحة المعلومات", href: "/", icon: List },
-  { name: "طلبات الصرف", href: "/expenses", icon: File },
-  { name: "الطلبات المعلقة", href: "/pending", icon: Bell },
-  { name: "إدارة المستخدمين", href: "/users", icon: Users },
-  { name: "الإعدادات", href: "/settings", icon: Settings },
-];
+const roleLabels: Record<string, string> = {
+  employee: "موظف",
+  section_manager: "مدير قسم",
+  manager: "مدير تنفيذي",
+};
 
 export function Sidebar() {
   const { user } = useAuth();
   const location = useLocation();
-  const links = user?.role === "manager" ? managerLinks : employeeLinks;
+
+  const links = [
+    { name: "لوحة المعلومات", href: "/", icon: List },
+    { name: "طلبات الصرف", href: "/expenses", icon: File },
+
+    // ✅ الطلبات المعلقة لمدير القسم أو المدير التنفيذي
+    ...(["section_manager", "manager"].includes(user?.role || "")
+      ? [{ name: "الطلبات المعلقة", href: "/pending", icon: Bell }]
+      : []),
+
+    // ✅ إدارة المستخدمين والإعدادات فقط للمدير التنفيذي
+    ...(user?.role === "manager"
+      ? [
+          { name: "إدارة المستخدمين", href: "/users", icon: Users },
+          { name: "الإعدادات", href: "/settings", icon: Settings },
+        ]
+      : []),
+  ];
 
   return (
     <div className="hidden md:flex w-64 flex-col bg-white border-l shadow-sm">
@@ -42,6 +51,7 @@ export function Sidebar() {
           </Link>
         ))}
       </div>
+
       <div className="p-4 border-t">
         <div className="flex items-center gap-3 px-3 py-2">
           <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center">
@@ -50,7 +60,7 @@ export function Sidebar() {
           <div>
             <p className="text-sm font-medium">{user?.name || "مستخدم"}</p>
             <p className="text-xs text-muted-foreground">
-              {user?.role === "manager" ? "مدير تنفيذي" : "موظف"}
+              {roleLabels[user?.role || "employee"]}
             </p>
           </div>
         </div>
