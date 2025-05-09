@@ -1,7 +1,6 @@
-
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useExpenses } from "@/contexts/ExpenseContext";
+import { useExpenses, Expense } from "@/contexts/ExpenseContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,44 +19,35 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Expense } from "@/contexts/ExpenseContext";
 
 const PendingExpensesPage = () => {
-  const { state, updateExpenseStatus } = useExpenses();
+  const { expenses, updateStatus } = useExpenses();
   const { user } = useAuth();
   const navigate = useNavigate();
+
   const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
   const [comment, setComment] = useState("");
-  const [action, setAction] = useState<"approve" | "reject" | null>(null);
+  const [action, setAction] = useState<"reject" | null>(null);
 
-  // Filter pending expenses
-  const pendingExpenses = state.expenses.filter(e => e.status === "pending");
+  const pendingExpenses = expenses.filter(
+    (e) => e.status === "pending" && e.department === user?.department
+  );
 
-  // Check if user is authorized to view this page
-  if (user?.role !== "manager") {
+  if (user?.role !== "section_manager") {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh]">
         <h2 className="text-2xl font-bold mb-2">غير مصرح بالوصول</h2>
         <p className="text-muted-foreground mb-4">
-          هذه الصفحة متاحة فقط للمدير التنفيذي
+          هذه الصفحة متاحة فقط لمدراء الأقسام
         </p>
         <Button onClick={() => navigate("/")}>العودة إلى الصفحة الرئيسية</Button>
       </div>
     );
   }
 
-  const handleApprove = () => {
-    if (selectedExpense) {
-      updateExpenseStatus(selectedExpense.id, "approved", comment);
-      setSelectedExpense(null);
-      setComment("");
-      setAction(null);
-    }
-  };
-
   const handleReject = () => {
-    if (selectedExpense) {
-      updateExpenseStatus(selectedExpense.id, "rejected", comment);
+    if (selectedExpense?.id) {
+      updateStatus(selectedExpense.id, "rejected");
       setSelectedExpense(null);
       setComment("");
       setAction(null);
@@ -80,9 +70,11 @@ const PendingExpensesPage = () => {
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle>{expense.expenseType}</CardTitle>
+                    <CardTitle>{expense.title}</CardTitle>
                     <CardDescription>
-                      طلب #{expense.id.substring(0, 5)} - بواسطة {expense.employeeName} ({expense.department})
+                      طلب #{expense.id?.substring(0, 5)} - بواسطة{" "}
+                      <strong>{expense.employeeName || "—"}</strong> (
+                      {expense.department || "—"})
                     </CardDescription>
                   </div>
                   <span className="px-3 py-1 text-sm font-medium rounded-full bg-yellow-100 text-yellow-800">
@@ -94,40 +86,53 @@ const PendingExpensesPage = () => {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">المبلغ</p>
-                    <p className="font-bold">{expense.amount.toLocaleString()} ريال</p>
+                    <p className="font-bold">
+                      {expense.amount.toLocaleString()} ريال
+                    </p>
                   </div>
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">تاريخ الطلب</p>
-                    <p>{new Date(expense.createdAt).toLocaleDateString("ar-SA")}</p>
+                    <p>
+                      {expense.createdAt?.seconds
+                        ? new Date(expense.createdAt.seconds * 1000).toLocaleDateString("ar-SA")
+                        : "—"}
+                    </p>
                   </div>
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">المرفقات</p>
-                    <p>{expense.attachments.length} ملفات</p>
+                    <p>{expense.attachments?.length || 0} ملفات</p>
                   </div>
                 </div>
 
                 <div className="mb-4">
-                  <p className="text-sm font-medium text-muted-foreground mb-1">التفاصيل:</p>
-                  <p className="p-3 bg-muted/30 rounded-md">{expense.details}</p>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">الوصف:</p>
+                  <p className="p-3 bg-muted/30 rounded-md">{expense.description}</p>
                 </div>
 
                 <div className="flex flex-wrap gap-2">
-                  <Button 
-                    onClick={() => navigate(`/expenses/${expense.id}`)} 
+                  <Button
+                    onClick={() => navigate(`/expenses/${expense.id}`)}
                     variant="outline"
                   >
                     عرض التفاصيل الكاملة
                   </Button>
-                  <Button 
-                    onClick={() => {
-                      setSelectedExpense(expense);
-                      setAction("approve");
-                    }}
+
+                  <Button
+                    onClick={() => updateStatus(expense.id!, "approved_by_department")}
                     className="bg-green-600 hover:bg-green-700"
                   >
-                    الموافقة على الطلب
+                    الموافقة المباشرة
                   </Button>
-                  <Button 
+
+                  <Button
+                    onClick={() => updateStatus(expense.id!, "waiting_executive")}
+                    variant="default"
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    إرسال للمدير التنفيذي
+                  </Button>
+
+                  <Button
                     onClick={() => {
                       setSelectedExpense(expense);
                       setAction("reject");
@@ -152,23 +157,22 @@ const PendingExpensesPage = () => {
         )}
       </div>
 
-      <Dialog open={!!selectedExpense} onOpenChange={(open) => !open && setSelectedExpense(null)}>
+      <Dialog
+        open={!!selectedExpense}
+        onOpenChange={(open) => !open && setSelectedExpense(null)}
+      >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>
-              {action === "approve"
-                ? "تأكيد الموافقة على الطلب"
-                : "تأكيد رفض الطلب"}
-            </DialogTitle>
+            <DialogTitle>تأكيد رفض الطلب</DialogTitle>
             <DialogDescription>
-              طلب صرف #{selectedExpense?.id.substring(0, 5)} - {selectedExpense?.expenseType}
+              طلب صرف #{selectedExpense?.id?.substring(0, 5)} - {selectedExpense?.title}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
               <p className="text-sm font-medium mb-1">إضافة تعليق (اختياري):</p>
               <Textarea
-                placeholder="أدخل سبب الموافقة أو الرفض"
+                placeholder="أدخل سبب الرفض"
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
               />
@@ -184,22 +188,9 @@ const PendingExpensesPage = () => {
             >
               إلغاء
             </Button>
-            {action === "approve" ? (
-              <Button
-                variant="default"
-                onClick={handleApprove}
-                className="bg-green-600 hover:bg-green-700"
-              >
-                موافقة
-              </Button>
-            ) : (
-              <Button
-                variant="destructive"
-                onClick={handleReject}
-              >
-                رفض
-              </Button>
-            )}
+            <Button variant="destructive" onClick={handleReject}>
+              رفض الطلب
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

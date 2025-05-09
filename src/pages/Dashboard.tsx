@@ -1,5 +1,5 @@
-
 import React from "react";
+import { Link } from "react-router-dom";
 import {
   Card,
   CardContent,
@@ -10,30 +10,27 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useExpenses } from "@/contexts/ExpenseContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { PlusCircle } from "lucide-react";
 
 const Dashboard = () => {
-  const { state } = useExpenses();
+  const { expenses } = useExpenses();
   const { user } = useAuth();
-  const { expenses } = state;
 
-  // Filter expenses based on user role
   const userExpenses = user?.role === "employee"
-    ? expenses.filter(expense => expense.employeeId === user.id)
+    ? expenses.filter(expense => expense.createdBy === user.id)
     : expenses;
 
-  // Calculate statistics
   const pendingCount = userExpenses.filter(e => e.status === "pending").length;
   const approvedCount = userExpenses.filter(e => e.status === "approved").length;
   const rejectedCount = userExpenses.filter(e => e.status === "rejected").length;
-  
+
   const totalAmount = userExpenses.reduce((sum, expense) => sum + expense.amount, 0);
   const approvedAmount = userExpenses
     .filter(e => e.status === "approved")
     .reduce((sum, expense) => sum + expense.amount, 0);
-  
-  // Get recent expenses
+
   const recentExpenses = [...userExpenses]
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .sort((a, b) => b.createdAt?.seconds - a.createdAt?.seconds)
     .slice(0, 5);
 
   return (
@@ -43,6 +40,18 @@ const Dashboard = () => {
         <p className="text-muted-foreground">
           هذه لوحة معلومات نظام إدارة المصاريف - يمكنك متابعة طلباتك من هنا
         </p>
+
+        {user?.role === "employee" && (
+          <div className="mt-4">
+            <Link
+              to="/expenses/new"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 transition"
+            >
+              <PlusCircle className="w-4 h-4" />
+              <span>إضافة طلب صرف</span>
+            </Link>
+          </div>
+        )}
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -88,6 +97,7 @@ const Dashboard = () => {
           <TabsTrigger value="recent">أحدث الطلبات</TabsTrigger>
           <TabsTrigger value="pending">الطلبات المعلقة</TabsTrigger>
         </TabsList>
+
         <TabsContent value="recent" className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-1">
             <Card>
@@ -105,13 +115,18 @@ const Dashboard = () => {
                       className="flex items-center justify-between p-3 border rounded-md"
                     >
                       <div>
-                        <div className="font-medium">{expense.expenseType}</div>
+                        <div className="font-medium">{expense.expenseType || expense.title}</div>
                         <div className="text-sm text-muted-foreground">
-                          {expense.employeeName} • {new Date(expense.createdAt).toLocaleDateString('ar-SA')}
+                          {expense.employeeName || "—"} •{" "}
+                          {expense.createdAt?.seconds
+                            ? new Date(expense.createdAt.seconds * 1000).toLocaleDateString("ar-SA")
+                            : ""}
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <div className="font-medium">{expense.amount.toLocaleString()} ريال</div>
+                        <div className="font-medium">
+                          {expense.amount.toLocaleString()} ريال
+                        </div>
                         <div
                           className={`px-2 py-1 text-xs rounded-full ${
                             expense.status === "approved"
@@ -139,6 +154,7 @@ const Dashboard = () => {
             </Card>
           </div>
         </TabsContent>
+
         <TabsContent value="pending" className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-1">
             <Card>
@@ -158,9 +174,12 @@ const Dashboard = () => {
                         className="flex items-center justify-between p-3 border rounded-md"
                       >
                         <div>
-                          <div className="font-medium">{expense.expenseType}</div>
+                          <div className="font-medium">{expense.expenseType || expense.title}</div>
                           <div className="text-sm text-muted-foreground">
-                            {expense.employeeName} • {new Date(expense.createdAt).toLocaleDateString('ar-SA')}
+                            {expense.employeeName || "—"} •{" "}
+                            {expense.createdAt?.seconds
+                              ? new Date(expense.createdAt.seconds * 1000).toLocaleDateString("ar-SA")
+                              : ""}
                           </div>
                         </div>
                         <div className="flex items-center gap-2">

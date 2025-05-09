@@ -12,18 +12,16 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { File } from "lucide-react"; // Fixed import for File icon
+import { File } from "lucide-react";
 
 const ExpenseDetailPage = () => {
   const { id } = useParams<{ id: string }>();
-  const { state, updateExpenseStatus } = useExpenses();
+  const { expenses, updateStatus } = useExpenses();
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  // Find expense by id
-  const expense = state.expenses.find((e) => e.id === id);
+  const expense = expenses.find((e) => e.id === id);
 
-  // If expense doesn't exist, redirect to expenses list
   if (!expense) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh]">
@@ -36,14 +34,14 @@ const ExpenseDetailPage = () => {
     );
   }
 
-  // Format date
-  const formattedDate = new Date(expense.createdAt).toLocaleDateString("ar-SA", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
+  const formattedDate = expense.createdAt?.seconds
+    ? new Date(expense.createdAt.seconds * 1000).toLocaleDateString("ar-SA", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      })
+    : "—";
 
-  // Status badge class
   const statusClass =
     expense.status === "approved"
       ? "bg-green-100 text-green-800"
@@ -51,7 +49,6 @@ const ExpenseDetailPage = () => {
       ? "bg-red-100 text-red-800"
       : "bg-yellow-100 text-yellow-800";
 
-  // Status text
   const statusText =
     expense.status === "approved"
       ? "تمت الموافقة"
@@ -66,11 +63,9 @@ const ExpenseDetailPage = () => {
           <div className="flex items-center justify-between">
             <div className="space-y-1">
               <CardTitle className="text-2xl">
-                طلب صرف #{expense.id.substring(0, 5)}
+                طلب صرف #{expense.id?.substring(0, 5)}
               </CardTitle>
-              <CardDescription>
-                تم تقديمه في {formattedDate}
-              </CardDescription>
+              <CardDescription>تم تقديمه في {formattedDate}</CardDescription>
             </div>
             <span className={`px-3 py-1 text-sm font-medium rounded-full ${statusClass}`}>
               {statusText}
@@ -83,15 +78,15 @@ const ExpenseDetailPage = () => {
             <div className="space-y-4">
               <div>
                 <h3 className="text-sm font-medium text-muted-foreground">اسم الموظف</h3>
-                <p className="mt-1">{expense.employeeName}</p>
+                <p className="mt-1">{expense.employeeName || "—"}</p>
               </div>
               <div>
                 <h3 className="text-sm font-medium text-muted-foreground">القسم</h3>
-                <p className="mt-1">{expense.department}</p>
+                <p className="mt-1">{expense.department || "—"}</p>
               </div>
               <div>
                 <h3 className="text-sm font-medium text-muted-foreground">نوع الصرف</h3>
-                <p className="mt-1">{expense.expenseType}</p>
+                <p className="mt-1">{expense.expenseType || "—"}</p>
               </div>
             </div>
 
@@ -104,12 +99,14 @@ const ExpenseDetailPage = () => {
                 <h3 className="text-sm font-medium text-muted-foreground">تاريخ التقديم</h3>
                 <p className="mt-1">{formattedDate}</p>
               </div>
-              <div>
-                <h3 className="text-sm font-medium text-muted-foreground">آخر تحديث</h3>
-                <p className="mt-1">
-                  {new Date(expense.updatedAt).toLocaleDateString("ar-SA")}
-                </p>
-              </div>
+              {expense.updatedAt?.seconds && (
+                <div>
+                  <h3 className="text-sm font-medium text-muted-foreground">آخر تحديث</h3>
+                  <p className="mt-1">
+                    {new Date(expense.updatedAt.seconds * 1000).toLocaleDateString("ar-SA")}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -117,21 +114,28 @@ const ExpenseDetailPage = () => {
 
           <div className="space-y-4">
             <div>
-              <h3 className="text-sm font-medium text-muted-foreground">التفاصيل</h3>
-              <p className="mt-2 p-3 bg-muted/30 rounded-md">{expense.details}</p>
+              <h3 className="text-sm font-medium text-muted-foreground">الوصف</h3>
+              <p className="mt-2 p-3 bg-muted/30 rounded-md">{expense.description}</p>
             </div>
 
             {expense.attachments && expense.attachments.length > 0 && (
               <div>
                 <h3 className="text-sm font-medium text-muted-foreground">المرفقات</h3>
                 <ul className="mt-2 space-y-2">
-                  {expense.attachments.map((attachment, index) => (
+                  {expense.attachments.map((url, index) => (
                     <li
                       key={index}
-                      className="flex items-center p-2 bg-muted/30 rounded-md"
+                      className="flex items-center gap-2 p-2 bg-muted/30 rounded-md"
                     >
-                      <File className="h-4 w-4 ml-2" />
-                      <span>{attachment}</span>
+                      <File className="h-4 w-4" />
+                      <a
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="underline text-blue-600 hover:text-blue-800"
+                      >
+                        تحميل الملف {index + 1}
+                      </a>
                     </li>
                   ))}
                 </ul>
@@ -151,14 +155,14 @@ const ExpenseDetailPage = () => {
           <Button variant="outline" onClick={() => navigate("/expenses")}>
             العودة للقائمة
           </Button>
-          
+
           {user?.role === "manager" && expense.status === "pending" && (
             <div className="space-x-2 rtl:space-x-reverse">
               <Button
                 variant="outline"
                 className="text-red-600 border-red-600 hover:bg-red-50"
                 onClick={() => {
-                  updateExpenseStatus(expense.id, "rejected");
+                  updateStatus(expense.id!, "rejected");
                   navigate("/expenses");
                 }}
               >
@@ -167,7 +171,7 @@ const ExpenseDetailPage = () => {
               <Button
                 className="bg-green-600 hover:bg-green-700"
                 onClick={() => {
-                  updateExpenseStatus(expense.id, "approved");
+                  updateStatus(expense.id!, "approved");
                   navigate("/expenses");
                 }}
               >
