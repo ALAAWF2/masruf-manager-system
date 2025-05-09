@@ -1,4 +1,3 @@
-
 import React from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useExpenses } from "@/contexts/ExpenseContext";
@@ -13,6 +12,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { File } from "lucide-react"; // Fixed import for File icon
 
 const ExpenseDetailPage = () => {
   const { id } = useParams<{ id: string }>();

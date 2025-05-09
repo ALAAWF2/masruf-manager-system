@@ -2,6 +2,14 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { 
+  signInWithEmailAndPassword, 
+  signOut, 
+  onAuthStateChanged,
+  User as FirebaseUser
+} from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
+import { auth, db } from "@/services/firebase";
 
 type User = {
   id: string;
@@ -18,7 +26,7 @@ type AuthContextType = {
   loading: boolean;
 };
 
-// Demo users for the prototype
+// Demo users for the prototype - will be replaced by Firebase data
 const DEMO_USERS = [
   {
     id: "1",
@@ -50,13 +58,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  // Check if user is already logged in
+  // Listen for auth state changes
   useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
-    setLoading(false);
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        try {
+          // Get user data from Firestore
+          const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
+          
+          if (userDoc.exists()) {
+            // User exists in Firestore
+            const userData = userDoc.data() as Omit<User, "id">;
+            setUser({ 
+              id: firebaseUser.uid, 
+              ...userData 
+            });
+          } else {
+            // For demo purposes, if the user doesn't exist in Firestore but is authenticated,
+            // fall back to demo users
+            const demoUser = DEMO_USERS.find(u => u.email === firebaseUser.email);
+            if (demoUser) {
+              const { password, ...secureUser } = demoUser;
+              setUser(secureUser);
+            } else {
+              // If we can't find a matching demo user, log them out
+              await signOut(auth);
+              setUser(null);
+            }
+          }
+        } catch (error) {
+          console.error("Error fetching user data:", error);
+          toast.error("حدث خطأ أثناء تحميل بيانات المستخدم");
+        }
+      } else {
+        // User is signed out
+        setUser(null);
+      }
+      setLoading(false);
+    });
+
+    // Cleanup subscription
+    return () => unsubscribe();
   }, []);
 
   // Login function
@@ -64,12 +106,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setLoading(true);
     
     try {
-      // In a real app, this would be an API call
-      const user = DEMO_USERS.find((u) => u.email === email && u.password === password);
+      // Try to sign in with Firebase
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const firebaseUser = userCredential.user;
       
-      if (user) {
+      try {
+        // Get user data from Firestore
+        const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
+        
+        if (userDoc.exists()) {
+          // User exists in Firestore
+          const userData = userDoc.data() as Omit<User, "id">;
+          setUser({ 
+            id: firebaseUser.uid, 
+            ...userData 
+          });
+          toast.success("تم تسجيل الدخول بنجاح");
+          navigate("/");
+        } else {
+          // For demo purposes, if the user doesn't exist in Firestore
+          const demoUser = DEMO_USERS.find(u => u.email === email);
+          if (demoUser) {
+            const { password, ...secureUser } = demoUser;
+            setUser(secureUser);
+            toast.success("تم تسجيل الدخول بنجاح");
+            navigate("/");
+          } else {
+            toast.error("لم يتم العثور على بيانات المستخدم");
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching user data:", error);
+        toast.error("حدث خطأ أثناء تحميل بيانات المستخدم");
+      }
+    } catch (error) {
+      console.error("Login error:", error);
+      // For demo purposes, try with demo users if Firebase auth fails
+      const demoUser = DEMO_USERS.find(u => u.email === email && u.password === password);
+      
+      if (demoUser) {
         // Strip password for security
-        const { password, ...secureUser } = user;
+        const { password, ...secureUser } = demoUser;
         setUser(secureUser);
         localStorage.setItem("user", JSON.stringify(secureUser));
         toast.success("تم تسجيل الدخول بنجاح");
@@ -77,20 +154,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else {
         toast.error("البريد الالكتروني أو كلمة المرور غير صحيحة");
       }
-    } catch (error) {
-      toast.error("حدث خطأ أثناء تسجيل الدخول");
-      console.error(error);
     } finally {
       setLoading(false);
     }
   };
 
   // Logout function
-  const logout = () => {
-    localStorage.removeItem("user");
-    setUser(null);
-    toast.info("تم تسجيل الخروج بنجاح");
-    navigate("/login");
+  const logout = async () => {
+    try {
+      await signOut(auth);
+      localStorage.removeItem("user");
+      setUser(null);
+      toast.info("تم تسجيل الخروج بنجاح");
+      navigate("/login");
+    } catch (error) {
+      console.error("Logout error:", error);
+      toast.error("حدث خطأ أثناء تسجيل الخروج");
+    }
   };
 
   return (
