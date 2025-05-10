@@ -2,7 +2,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { HashRouter as Router, Routes, Route } from "react-router-dom";
+
 import { AuthProvider } from "./contexts/AuthContext";
 import { ExpenseProvider } from "./contexts/ExpenseContext";
 import RootLayout from "./components/layout/RootLayout";
@@ -16,6 +17,7 @@ import ExpenseDetailPage from "./pages/ExpenseDetailPage";
 import PendingExpensesPage from "./pages/PendingExpensesPage";
 import LoginPage from "./pages/LoginPage";
 import NotFound from "./pages/NotFound";
+import UsersPage from "./pages/UsersPage"; // ✅ تم إضافة صفحة إدارة المستخدمين
 
 const queryClient = new QueryClient();
 
@@ -24,7 +26,7 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter>
+      <Router>
         <AuthProvider>
           <ExpenseProvider>
             <Routes>
@@ -50,13 +52,21 @@ const App = () => (
                     </ProtectedRoute>
                   }
                 />
+                <Route
+                  path="users"
+                  element={
+                    <ProtectedRoute allowedRoles={["ceo"]}>
+                      <UsersPage />
+                    </ProtectedRoute>
+                  }
+                />
               </Route>
 
               <Route path="*" element={<NotFound />} />
             </Routes>
           </ExpenseProvider>
         </AuthProvider>
-      </BrowserRouter>
+      </Router>
     </TooltipProvider>
   </QueryClientProvider>
 );

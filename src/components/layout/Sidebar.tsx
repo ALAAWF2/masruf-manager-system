@@ -7,7 +7,7 @@ import { File, Bell, Users, List, Settings } from "lucide-react";
 const roleLabels: Record<string, string> = {
   employee: "موظف",
   section_manager: "مدير قسم",
-  manager: "مدير تنفيذي",
+  manager: "مدير تنفيذي", // ✅ تعديل الاسم الظاهر
 };
 
 export function Sidebar() {

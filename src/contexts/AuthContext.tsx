@@ -1,22 +1,23 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { 
-  signInWithEmailAndPassword, 
-  signOut, 
+import {
+  signInWithEmailAndPassword,
+  signOut,
   onAuthStateChanged,
-  User as FirebaseUser
+  User as FirebaseUser,
 } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { auth, db } from "@/services/firebase";
 
+// ✅ تعريف المستخدم مع حقل department
 type User = {
   id: string;
   name: string;
   email: string;
-  role: "employee" | "manager" | "section_manager"; // ← ✅ صح
+  role: "employee" | "manager" | "section_manager";
+  department: string;
 };
-
 
 type AuthContextType = {
   user: User | null;
@@ -25,6 +26,7 @@ type AuthContextType = {
   loading: boolean;
 };
 
+// ✅ مستخدمين تجريبيين
 const DEMO_USERS = [
   {
     id: "1",
@@ -32,7 +34,7 @@ const DEMO_USERS = [
     email: "employee@example.com",
     password: "password123",
     role: "employee" as const,
-    department: "التسويق"
+    department: "التسويق",
   },
   {
     id: "2",
@@ -40,15 +42,15 @@ const DEMO_USERS = [
     email: "manager@example.com",
     password: "password123",
     role: "manager" as const,
-    department: "الإدارة"
-  }
+    department: "الإدارة",
+  },
 ];
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   login: async () => {},
   logout: () => {},
-  loading: true
+  loading: true,
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -56,7 +58,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  // ✅ تحميل المستخدم من localStorage عند أول تشغيل
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
     if (storedUser) {
@@ -69,7 +70,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // ✅ حفظ المستخدم تلقائيًا في localStorage
   useEffect(() => {
     if (user) {
       localStorage.setItem("user", JSON.stringify(user));
@@ -85,11 +85,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
           if (userDoc.exists()) {
             const userData = userDoc.data() as Omit<User, "id">;
-            const fullUser = { id: firebaseUser.uid, ...userData };
+            const fullUser: User = { id: firebaseUser.uid, ...userData };
             setUser(fullUser);
             localStorage.setItem("user", JSON.stringify(fullUser));
           } else {
-            const demoUser = DEMO_USERS.find(u => u.email === firebaseUser.email);
+            const demoUser = DEMO_USERS.find(
+              (u) => u.email === firebaseUser.email
+            );
             if (demoUser) {
               const { password, ...secureUser } = demoUser;
               setUser(secureUser);
@@ -115,19 +117,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (email: string, password: string) => {
     setLoading(true);
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
       const firebaseUser = userCredential.user;
 
       const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
       if (userDoc.exists()) {
         const userData = userDoc.data() as Omit<User, "id">;
-        const fullUser = { id: firebaseUser.uid, ...userData };
+        const fullUser: User = { id: firebaseUser.uid, ...userData };
         setUser(fullUser);
         localStorage.setItem("user", JSON.stringify(fullUser));
         toast.success("تم تسجيل الدخول بنجاح");
         navigate("/");
       } else {
-        const demoUser = DEMO_USERS.find(u => u.email === email);
+        const demoUser = DEMO_USERS.find(
+          (u) => u.email === email && u.password === password
+        );
         if (demoUser) {
           const { password, ...secureUser } = demoUser;
           setUser(secureUser);
@@ -140,7 +148,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (error) {
       console.error("Login error:", error);
-      const demoUser = DEMO_USERS.find(u => u.email === email && u.password === password);
+      const demoUser = DEMO_USERS.find(
+        (u) => u.email === email && u.password === password
+      );
       if (demoUser) {
         const { password, ...secureUser } = demoUser;
         setUser(secureUser);

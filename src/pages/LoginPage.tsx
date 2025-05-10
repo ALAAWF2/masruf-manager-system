@@ -1,4 +1,3 @@
-
 import React from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
@@ -98,18 +97,6 @@ const LoginPage = () => {
             </form>
           </Form>
         </Card>
-
-        <div className="text-center text-sm text-gray-500">
-          <div>
-            <p>بيانات تسجيل الدخول التجريبية:</p>
-            <p>
-              الموظف: employee@example.com / password123
-            </p>
-            <p>
-              المدير: manager@example.com / password123
-            </p>
-          </div>
-        </div>
       </div>
     </div>
   );
