@@ -17,7 +17,7 @@ import ExpenseDetailPage from "./pages/ExpenseDetailPage";
 import PendingExpensesPage from "./pages/PendingExpensesPage";
 import LoginPage from "./pages/LoginPage";
 import NotFound from "./pages/NotFound";
-import UsersPage from "./pages/UsersPage"; // ✅ تم إضافة صفحة إدارة المستخدمين
+import UsersPage from "./pages/UsersPage"; // ✅ صفحة إدارة المستخدمين
 
 const queryClient = new QueryClient();
 
@@ -32,6 +32,7 @@ const App = () => (
             <Routes>
               <Route path="/login" element={<LoginPage />} />
 
+              {/* 🧱 المسارات الرئيسية داخل RootLayout */}
               <Route
                 path="/"
                 element={
@@ -52,16 +53,19 @@ const App = () => (
                     </ProtectedRoute>
                   }
                 />
-                <Route
-                  path="users"
-                  element={
-                    <ProtectedRoute allowedRoles={["ceo"]}>
-                      <UsersPage />
-                    </ProtectedRoute>
-                  }
-                />
               </Route>
 
+              {/* ✅ إدارة المستخدمين خارج "/" لضمان عمل ProtectedRoute */}
+              <Route
+                path="/users"
+                element={
+                  <ProtectedRoute allowedRoles={["manager"]}>
+                    <UsersPage />
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* 🔚 صفحة غير موجودة */}
               <Route path="*" element={<NotFound />} />
             </Routes>
           </ExpenseProvider>
