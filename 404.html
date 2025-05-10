@@ -1,7 +1,17 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
   <head>
-    <meta http-equiv="refresh" content="0; url=/masruf-manager-system/" />
+    <meta charset="UTF-8" />
+    <title>Redirecting...</title>
+    <script>
+      // Get current path and query string
+      var redirectTo = window.location.pathname.replace(
+        /^\/masruf-manager-system/,
+        ""
+      );
+      var newUrl = "/masruf-manager-system" + redirectTo + window.location.search + window.location.hash;
+      window.location.replace(newUrl);
+    </script>
   </head>
   <body>
     <p>Redirecting...</p>
