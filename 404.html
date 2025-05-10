@@ -1,19 +1,17 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
   <head>
-    <meta charset="UTF-8" />
-    <title>Redirecting...</title>
-    <script>
-      // Get current path and query string
-      var redirectTo = window.location.pathname.replace(
-        /^\/masruf-manager-system/,
-        ""
-      );
-      var newUrl = "/masruf-manager-system" + redirectTo + window.location.search + window.location.hash;
-      window.location.replace(newUrl);
+    <meta charset="utf-8">
+    <title>Redirecting…</title>
+    <script type="text/javascript">
+      // Rebuild correct path for GitHub Pages
+      const path = window.location.pathname.replace(/^\/masruf-manager-system/, '');
+      const search = window.location.search || '';
+      const hash = window.location.hash || '';
+      window.location.replace(`/masruf-manager-system/${path}${search}${hash}`);
     </script>
   </head>
   <body>
-    <p>Redirecting...</p>
+    <p>Redirecting…</p>
   </body>
 </html>
